@@ -1,0 +1,6 @@
+.vs/
+.vscode/
+.repo/
+buildroot/dl/
+external/
+prebuilts/
