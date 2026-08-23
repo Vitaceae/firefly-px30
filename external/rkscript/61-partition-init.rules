@@ -1,0 +1,46 @@
+# rockchip internal storage links: /dev/disk/by-partlabel and /dev/block/by-name
+
+ACTION=="remove", GOTO="rk_internal_storage_end"
+ENV{UDEV_DISABLE_ROCKCHIP_STORAGE_RULES_FLAG}=="1", GOTO="rk_internal_storage_end"
+SUBSYSTEM!="block|mtd", GOTO="rk_internal_storage_end"
+KERNEL!="mmcblk*[0-9]|sd*|nvme*|rkflash*|rknand*|mtd*", GOTO="rk_internal_storage_end"
+
+IMPORT{cmdline}="storagemedia"
+IMPORT{cmdline}="storageboot.type"
+
+# ignore multiboot
+ENV{storageboot.type}=="multiboot", GOTO="rk_internal_storage_end"
+
+# ignore partitions that span the entire disk
+TEST=="whole_disk", GOTO="rk_internal_storage_end"
+
+# for partitions import parent information
+ENV{DEVTYPE}=="partition", IMPORT{parent}="ID_*"
+
+# for rknand parameter partition name
+ENV{storagemedia}=="nand", ENV{DEVNAME}=="/dev/rknand*", ENV{DEVTYPE}=="disk", ENV{DEVPATH}=="/devices/virtual/block/rknand", ENV{ID_RKNAND_PART_NAME}="", GOTO="rk_internal_storage_end"
+
+# for rkflash gpt partition name by-partlabel and /dev/block/by-name link
+ENV{storagemedia}=="nor", ENV{DEVTYPE}=="partition", ENV{PARTNAME}=="?*", SYMLINK+="disk/by-partlabel/$env{PARTNAME}", SYMLINK+="block/by-name/$env{PARTNAME}", GOTO="rk_internal_storage_end"
+
+# for emmc gpt partition name /dev/block/by-name link
+ATTRS{type}=="MMC", ENV{ID_PART_ENTRY_SCHEME}=="gpt", ENV{ID_PART_ENTRY_NAME}=="?*", SYMLINK+="block/by-name/$env{ID_PART_ENTRY_NAME}"
+
+# for sdmmc gpt partition name /dev/block/by-name link
+ENV{storagemedia}=="sd", ATTRS{type}=="SD", ENV{ID_PART_ENTRY_SCHEME}=="gpt", ENV{ID_PART_ENTRY_NAME}=="?*", SYMLINK+="block/by-name/$env{ID_PART_ENTRY_NAME}", GOTO="rk_internal_storage_end"
+
+# for usb gpt partition name /dev/block/by-name link
+ENV{storagemedia}=="usb", ENV{ID_BUS}=="usb", ENV{DEVNAME}=="/dev/sd*", ENV{ID_PART_ENTRY_SCHEME}=="gpt", ENV{ID_PART_ENTRY_NAME}=="?*", SYMLINK+="block/by-name/$env{ID_PART_ENTRY_NAME}", GOTO="rk_internal_storage_end"
+
+ENV{storagemedia}=="usb", ENV{ID_BUS}=="ata", ENV{DEVNAME}=="/dev/sd*", ENV{ID_PART_ENTRY_SCHEME}=="gpt", ENV{ID_PART_ENTRY_NAME}=="?*", SYMLINK+="block/by-name/$env{ID_PART_ENTRY_NAME}", GOTO="rk_internal_storage_end"
+
+# for scsi gpt partition name /dev/block/by-name link
+ENV{storagemedia}=="scsi", ENV{ID_BUS}=="ata", ENV{DEVNAME}=="/dev/sd*", ENV{ID_PART_ENTRY_SCHEME}=="gpt", ENV{ID_PART_ENTRY_NAME}=="?*", SYMLINK+="block/by-name/$env{ID_PART_ENTRY_NAME}", GOTO="rk_internal_storage_end"
+
+# for nvme gpt partition name /dev/block/by-name link
+ENV{storagemedia}=="nvme", , ENV{DEVNAME}=="/dev/nvme*", ENV{ID_PART_ENTRY_SCHEME}=="gpt", ENV{ID_PART_ENTRY_NAME}=="?*", SYMLINK+="block/by-name/$env{ID_PART_ENTRY_NAME}", GOTO="rk_internal_storage_end"
+
+# for mtd partition name /dev/block/by-name link
+ENV{storagemedia}=="mtd", ENV{DEVNAME}=="/dev/mtd*", ENV{DEVTYPE}=="mtd", ATTRS{name}=="?*", SYMLINK+="block/by-name/$attr{name}", GOTO="rk_internal_storage_end"
+
+LABEL="rk_internal_storage_end"
